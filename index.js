@@ -7,6 +7,10 @@ const StringDecoder = require('string_decoder').StringDecoder;
 const config = require('./config');
 const fs = require('fs');
 
+// Action Filters
+const handlers = require('./lib/handlers');
+const router = require('./lib/router');
+
 
 // Create the Server
 let httpServer = http.createServer(function (req, res) {
@@ -56,11 +60,12 @@ let unifiedServer = function (req, res) {
     req.on('data', function (data) {
         buffer += decoder.write(data);
     });
+    
     req.on('end', function () {
         buffer += decoder.end();
 
-        // Choose the handcler this requiest should go to. If one is not found go to the notFound handler.
-        let choosenHandler = typeof (router[trimmedPath]) !== 'undefined' ? router[trimmedPath] : handlers.notFound;
+        // Choose the handler this request should go to. If one is not found go to the notFound handler.
+        let chosenHandler = typeof (router[trimmedPath]) !== 'undefined' ? router[trimmedPath] : handlers.notFound;
 
         // Construct the data object to send to the handler
         let data = {
@@ -72,8 +77,8 @@ let unifiedServer = function (req, res) {
         };
 
         //Route the request to the handler specified in the router
-        choosenHandler(data, function (statusCode, payload) {
-            // Use the status code called back by the hanlder, or the default 200
+        chosenHandler(data, function (statusCode, payload) {
+            // Use the status code called back by the handler, or the default 200
             statusCode = typeof (statusCode) == 'number' ? statusCode : 200;
 
             // Use the payload called back by the handler, or default to an empty object
@@ -93,25 +98,3 @@ let unifiedServer = function (req, res) {
     });
 };
 
-// Define Handlers
-let handlers = {};
-
-handlers.hello = function (data, callback) {
-    if (data.method === "post")
-        callback(200, {"message": "Hello you have created your first API."});
-    else handlers.methodNotAllowed(data, callback);
-};
-
-// Not found handler
-handlers.notFound = function (data, callback) {
-    callback(404);
-};
-
-// Method Not Allowed
-handlers.methodNotAllowed = function (data, callback) {
-    callback(405);
-};
-// Define a request router
-let router = {
-    'hello': handlers.hello
-};
